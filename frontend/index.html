@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>📱 Termux Monitor</title>
+    <link rel="stylesheet" href="css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <header class="header">
+            <h1>📱 TERMUX MONITOR</h1>
+            <div class="status-bar">
+                <div id="connection-status" class="status-item">
+                    <span class="status-dot offline"></span>
+                    <span>CONNECTING...</span>
+                </div>
+                <div id="last-update" class="status-item">
+                    <span>LAST UPDATE: NEVER</span>
+                </div>
+                <div id="auto-refresh-status" class="status-item">
+                    <span class="status-dot online"></span>
+                    <span>AUTO: ON</span>
+                </div>
+                <div class="controls">
+                    <button id="refresh-btn" class="btn btn-primary">🔄 REFRESH</button>
+                    <button id="auto-refresh-btn" class="btn btn-secondary">⏸️ AUTO</button>
+                </div>
+            </div>
+        </header>
+
+        <!-- Alert Banner -->
+        <div id="alert-banner" class="alert-banner hidden"></div>
+
+        <!-- Dashboard Grid -->
+        <div class="dashboard">
+            <!-- Battery Card -->
+            <div class="card battery-card" id="battery-card">
+                <div class="card-header">
+                    <h3>🔋 BATTERY STATUS</h3>
+                    <div class="card-actions">
+                        <div class="battery-indicator" id="battery-indicator">
+                            <span class="charging-icon" id="charging-icon">⚡</span>
+                            <span class="battery-level-bar" id="battery-level-bar"></span>
+                        </div>
+                        <button class="btn-icon" onclick="refreshBattery()">🔄</button>
+                    </div>
+                </div>
+                <div class="card-content">
+                    <!-- Main Battery Display -->
+                    <div class="battery-main">
+                        <div class="battery-level-display">
+                            <span class="battery-percentage" id="battery-level">--</span>
+                            <span class="battery-unit">%</span>
+                        </div>
+                        <div class="battery-status-display">
+                            <span class="status-badge" id="battery-status-badge">UNKNOWN</span>
+                            <span class="plugged-status" id="plugged-status">UNPLUGGED</span>
+                        </div>
+                    </div>
+
+                    <!-- Battery Details Grid -->
+                    <div class="battery-details">
+                        <div class="detail-section">
+                            <h4>⚡ POWER</h4>
+                            <div class="detail-grid">
+                                <div class="detail-item">
+                                    <span class="label">VOLTAGE</span>
+                                    <span class="value" id="battery-voltage">--V</span>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="label">CURRENT</span>
+                                    <span class="value current-value" id="battery-current">--mA</span>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="label">AVG CURRENT</span>
+                                    <span class="value" id="battery-current-avg">--mA</span>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="label">CAPACITY</span>
+                                    <span class="value" id="battery-capacity">--mAh</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="detail-section">
+                            <h4>🌡️ ENVIRONMENT</h4>
+                            <div class="detail-grid">
+                                <div class="detail-item">
+                                    <span class="label">TEMPERATURE</span>
+                                    <span class="value temp-value" id="battery-temp">--°C</span>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="label">HEALTH</span>
+                                    <span class="value health-value" id="battery-health">--</span>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="label">TECHNOLOGY</span>
+                                    <span class="value" id="battery-tech">--</span>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="label">CYCLES</span>
+                                    <span class="value" id="battery-cycles">--</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="detail-section">
+                            <h4>📊 STATISTICS</h4>
+                            <div class="detail-grid">
+                                <div class="detail-item">
+                                    <span class="label">SCALE</span>
+                                    <span class="value" id="battery-scale">--</span>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="label">LEVEL</span>
+                                    <span class="value" id="battery-level-raw">--</span>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="label">PRESENT</span>
+                                    <span class="value" id="battery-present">--</span>
+                                </div>
+                                <div class="detail-item">
+                                    <span class="label">ENERGY</span>
+                                    <span class="value" id="battery-energy">--</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="detail-section">
+                            <h4>⏱️ STATUS INFO</h4>
+                            <div class="status-indicators">
+                                <div class="status-item">
+                                    <span class="indicator-dot" id="charging-indicator"></span>
+                                    <span id="charging-text">NOT CHARGING</span>
+                                </div>
+                                <div class="status-item">
+                                    <span class="indicator-dot" id="plugged-indicator"></span>
+                                    <span id="plugged-text">UNPLUGGED</span>
+                                </div>
+                                <div class="power-draw">
+                                    <span class="label">POWER DRAW:</span>
+                                    <span class="value power-value" id="power-draw">-- W</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Time Estimates -->
+                        <div class="detail-section" id="time-estimates">
+                            <h4>⏰ TIME ESTIMATES</h4>
+                            <div class="time-display">
+                                <div class="time-item">
+                                    <span class="label">TIME TO FULL:</span>
+                                    <span class="value" id="time-to-full">--</span>
+                                </div>
+                                <div class="time-item">
+                                    <span class="label">TIME REMAINING:</span>
+                                    <span class="value" id="time-remaining">--</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- System Card -->
+            <div class="card" id="system-card">
+                <div class="card-header">
+                    <h3>💻 SYSTEM</h3>
+                </div>
+                <div class="card-content">
+                    <div class="metric-group">
+                        <div class="metric main-metric">
+                            <span class="value" id="system-uptime">--</span>
+                            <span class="label">UPTIME</span>
+                        </div>
+                        <div class="metric">
+                            <span class="value" id="system-load">--</span>
+                            <span class="label">LOAD AVG</span>
+                        </div>
+                    </div>
+                    <div class="metric-grid">
+                        <div class="metric">
+                            <span class="label">MEMORY USED</span>
+                            <span class="value" id="memory-usage">--%</span>
+                        </div>
+                        <div class="metric">
+                            <span class="label">STORAGE USED</span>
+                            <span class="value" id="storage-usage">--%</span>
+                        </div>
+                        <div class="metric">
+                            <span class="label">PROCESSES</span>
+                            <span class="value" id="processes-count">--</span>
+                        </div>
+                        <div class="metric">
+                            <span class="label">CONNECTIONS</span>
+                            <span class="value" id="network-connections">--</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Network Card -->
+            <div class="card" id="network-card">
+                <div class="card-header">
+                    <h3>🌐 NETWORK</h3>
+                </div>
+                <div class="card-content">
+                    <div class="metric-group">
+                        <div class="metric main-metric">
+                            <span class="value" id="wifi-ssid">--</span>
+                            <span class="label">WIFI SSID</span>
+                        </div>
+                        <div class="metric">
+                            <span class="value" id="wifi-signal">--dBm</span>
+                            <span class="label">SIGNAL</span>
+                        </div>
+                    </div>
+                    <div class="metric-grid">
+                        <div class="metric">
+                            <span class="label">IP ADDRESS</span>
+                            <span class="value" id="wifi-ip">--</span>
+                        </div>
+                        <div class="metric">
+                            <span class="label">LINK SPEED</span>
+                            <span class="value" id="wifi-speed">--</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Location & Map Card -->
+            <div class="card card-wide" id="location-card">
+                <div class="card-header">
+                    <h3>📍 LOCATION & MAP</h3>
+                    <div class="location-controls">
+                        <button class="btn btn-sm" onclick="refreshLocation()">🔄 REFRESH</button>
+                        <button class="btn btn-sm" onclick="toggleMapView()">🗺️ MAP</button>
+                    </div>
+                </div>
+                <div class="card-content">
+                    <div class="location-info">
+                        <div class="metric-grid">
+                            <div class="metric">
+                                <span class="label">LATITUDE</span>
+                                <span class="value" id="location-lat">--</span>
+                            </div>
+                            <div class="metric">
+                                <span class="label">LONGITUDE</span>
+                                <span class="value" id="location-lng">--</span>
+                            </div>
+                            <div class="metric">
+                                <span class="label">ACCURACY</span>
+                                <span class="value" id="location-accuracy">--m</span>
+                            </div>
+                            <div class="metric">
+                                <span class="label">PROVIDER</span>
+                                <span class="value" id="location-provider">--</span>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="map-container" id="map-container">
+                        <div id="location-map" style="height: 400px; border-radius: 10px;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- File Browser Card -->
+            <div class="card card-wide" id="files-card">
+                <div class="card-header">
+                    <h3>📁 FILE BROWSER</h3>
+                    <div class="file-controls">
+                        <select id="folder-select">
+                            <option value="~/storage/shared">📱 SHARED STORAGE</option>
+                            <option value="~/storage/pictures">📸 PICTURES</option>
+                            <option value="~/storage/downloads">📥 DOWNLOADS</option>
+                            <option value="~/storage/music">🎵 MUSIC</option>
+                            <option value="~/storage/movies">🎬 MOVIES</option>
+                            <option value="~/storage/dcim">📷 DCIM</option>
+                        </select>
+                        <button class="btn btn-sm" onclick="refreshFiles()">🔄 REFRESH</button>
+                        <button class="btn btn-sm" onclick="capturePhoto()">📸 PHOTO</button>
+                        <button class="btn btn-sm" onclick="recordAudio()">🎤 AUDIO</button>
+                    </div>
+                </div>
+                <div class="card-content">
+                    <div class="file-stats" id="file-stats">
+                        <span>LOADING FILES...</span>
+                    </div>
+                    <div class="file-grid" id="file-grid">
+                        <!-- Files will be loaded here -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Location Card (Original - Now Hidden) -->
+            <div class="card hidden" id="location-card-old">
+                <div class="card-header">
+                    <h3>📍 LOCATION</h3>
+                </div>
+                <div class="card-content">
+                    <div class="metric-grid">
+                        <div class="metric">
+                            <span class="label">LATITUDE</span>
+                            <span class="value" id="location-lat-old">--</span>
+                        </div>
+                        <div class="metric">
+                            <span class="label">LONGITUDE</span>
+                            <span class="value" id="location-lng-old">--</span>
+                        </div>
+                        <div class="metric">
+                            <span class="label">ACCURACY</span>
+                            <span class="value" id="location-accuracy-old">--m</span>
+                        </div>
+                        <div class="metric">
+                            <span class="label">PROVIDER</span>
+                            <span class="value" id="location-provider-old">--</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Services Card -->
+            <div class="card" id="services-card">
+                <div class="card-header">
+                    <h3>🔧 SERVICES</h3>
+                </div>
+                <div class="card-content">
+                    <div class="service-list">
+                        <div class="service-item">
+                            <div class="service-info">
+                                <span class="service-name">SSH SERVER</span>
+                                <span class="service-status" id="ssh-status">
+                                    <span class="status-dot"></span>
+                                    <span class="status-text">UNKNOWN</span>
+                                </span>
+                            </div>
+                            <button class="btn btn-sm" onclick="restartService('ssh')">RESTART</button>
+                        </div>
+                        <div class="service-item">
+                            <div class="service-info">
+                                <span class="service-name">TUNNEL</span>
+                                <span class="service-status" id="tunnel-status">
+                                    <span class="status-dot"></span>
+                                    <span class="status-text">UNKNOWN</span>
+                                </span>
+                            </div>
+                            <button class="btn btn-sm" onclick="restartService('tunnel')">RESTART</button>
+                        </div>
+                        <div class="service-item">
+                            <div class="service-info">
+                                <span class="service-name">MONITOR</span>
+                                <span class="service-status" id="monitor-status">
+                                    <span class="status-dot"></span>
+                                    <span class="status-text">UNKNOWN</span>
+                                </span>
+                            </div>
+                            <button class="btn btn-sm" onclick="restartService('monitor')">RESTART</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts Card -->
+            <div class="card card-wide" id="charts-card">
+                <div class="card-header">
+                    <h3>📊 PERFORMANCE</h3>
+                    <div class="chart-controls">
+                        <button class="btn btn-sm" onclick="toggleChart('battery')">BATTERY</button>
+                        <button class="btn btn-sm" onclick="toggleChart('system')">SYSTEM</button>
+                    </div>
+                </div>
+                <div class="card-content">
+                    <canvas id="performance-chart" width="800" height="300"></canvas>
+                </div>
+            </div>
+
+            <!-- Logs Card -->
+            <div class="card card-wide" id="logs-card">
+                <div class="card-header">
+                    <h3>📋 LOGS</h3>
+                    <div class="log-controls">
+                        <select id="log-type">
+                            <option value="boot">BOOT LOG</option>
+                            <option value="tunnel">TUNNEL LOG</option>
+                            <option value="auto">AUTO LOG</option>
+                        </select>
+                        <button class="btn btn-sm" onclick="refreshLogs()">REFRESH</button>
+                    </div>
+                </div>
+                <div class="card-content">
+                    <div class="log-container">
+                        <pre id="log-content">LOADING LOGS...</pre>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/dashboard.js"></script>
+</body>
+</html>
