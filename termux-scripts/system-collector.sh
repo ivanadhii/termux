@@ -47,7 +47,7 @@ cat << EOF
     "uptime": "$(uptime -p)",
     "system": {
         "load_avg": "$(uptime | awk -F'load average:' '{print $2}' | xargs)",
-        "users": $(who | wc -l),
+        "users": $(ps aux | grep -v grep | grep -c bash || echo 1),
         "boot_time": "$(uptime -s 2>/dev/null || echo 'unknown')",
         "architecture": "$(uname -m)",
         "kernel": "$(uname -r)"
@@ -78,9 +78,9 @@ cat << EOF
         "ssh": $(pgrep sshd >/dev/null && echo 'true' || echo 'false'),
         "tunnel": $(pgrep -f cloudflared >/dev/null && echo 'true' || echo 'false'),
         "smart_monitor": $(pgrep -f smart-tunnel >/dev/null && echo 'true' || echo 'false'),
-        "ssh_pid": $(pgrep sshd | head -1 || echo 'null'),
-        "tunnel_pid": $(pgrep -f cloudflared | head -1 || echo 'null'),
-        "monitor_pid": $(pgrep -f smart-tunnel | head -1 || echo 'null')
+        "ssh_pid": $(SSH_PID=$(pgrep sshd | head -1); echo ${SSH_PID:-null}),
+        "tunnel_pid": $(TUNNEL_PID=$(pgrep -f cloudflared | head -1); echo ${TUNNEL_PID:-null}),
+        "monitor_pid": $(MONITOR_PID=$(pgrep -f smart-tunnel | head -1); echo ${MONITOR_PID:-null})
     },
     "wifi": $(get_wifi_info),
     "location": $(get_location_info),
